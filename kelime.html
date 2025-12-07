@@ -51,7 +51,16 @@
 </head>
 <body>
   <div class="controls">
-    <label>TXT Dosyası: <input type="file" id="fileInput" accept=".txt"></label><br>
+    <!-- LİSTE SEÇİMİ -->
+    <label>Kelime listesi:
+      <select id="sourceSelect">
+        <option value="1hece">1 heceliler</option>
+        <option value="2hece">2 heceliler</option>
+        <option value="3hece">3 heceliler</option>
+      </select>
+    </label>
+    <button type="button" onclick="loadWordsFromServer()">Yükle</button>
+    <br>
 
     <!-- MS CİNSİNDEN SÜRE -->
     <label>Süre (ms): <input type="number" id="timeInput" value="1000" min="50" step="50"></label><br>
@@ -94,18 +103,36 @@
     const userInput = document.getElementById('userInput');
     const resultDiv = document.getElementById('result');
 
-    document.getElementById('fileInput').addEventListener('change', function(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          words = e.target.result.split(/\s+/).filter(Boolean);
-          words = shuffleArray(words);
-          currentIndex = 0;
-        };
-        reader.readAsText(file, 'UTF-8');
+    const sourceSelect = document.getElementById('sourceSelect');
+
+    // Sunucudaki TXT dosyalarının adresleri
+    const SOURCES = {
+      "1hece": "https://ilhantopaloglu.github.io/HizliOkuma/1heceliler.txt",
+      "2hece": "https://ilhantopaloglu.github.io/HizliOkuma/2heceliler.txt",
+      "3hece": "https://ilhantopaloglu.github.io/HizliOkuma/3heceliler.txt"
+    };
+
+    async function loadWordsFromServer() {
+      const key = sourceSelect.value;
+      const url = SOURCES[key];
+      if (!url) {
+        alert("Geçersiz liste seçimi.");
+        return;
       }
-    });
+
+      try {
+        const res = await fetch(url + "?_t=" + Date.now()); // cache kırmak için
+        if (!res.ok) throw new Error("Dosya okunamadı: " + res.status);
+        const text = await res.text();
+        words = text.split(/\s+/).filter(Boolean);
+        words = shuffleArray(words);
+        currentIndex = 0;
+        alert("Kelime listesi yüklendi. Toplam kelime: " + words.length);
+      } catch (err) {
+        console.error(err);
+        alert("Kelime listesi yüklenirken hata: " + err.message);
+      }
+    }
 
     function shuffleArray(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -203,9 +230,13 @@
 
     function start() {
       stop();
+      if (words.length === 0) {
+        alert("Önce bir kelime listesi seçip 'Yükle' butonuna basın.");
+        return;
+      }
+
       currentIndex = 0;
       const mode = document.getElementById('modeSelect').value;
-
       const time = parseInt(document.getElementById('timeInput').value);
 
       if (mode === 'auto') {
