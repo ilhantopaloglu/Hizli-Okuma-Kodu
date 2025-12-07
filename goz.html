@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>X Yanıp-Sönme (Süre Sayaçlı)</title>
+  <style>
+    html,body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      font-family: Arial, Helvetica, sans-serif;
+      overflow: hidden;
+    }
+
+    .x-symbol {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1;
+      opacity: 0;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.95);
+      padding: 10px 14px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      font-size: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .status {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div id="xSymbol" class="x-symbol">X</div>
+
+  <div class="status">
+    Mesafe: <span id="distanceDisplay">1</span> birim (<span id="distancePx">10</span> px) |
+    Süre: <span id="timeCounter">0</span> sn
+  </div>
+
+  <div class="controls">
+    <label>Hız: <input id="speedInput" type="number" min="0.1" max="1" step="0.1" value="0.5"> sn</label>
+    <button id="toggleBtn">Durdur</button>
+    <button id="resetBtn">Sıfırla</button>
+  </div>
+
+  <audio id="tickSound" src="C:/Windows/Media/Windows Ding.wav" preload="auto"></audio>
+
+  <script>
+    // --- Ayarlar ---
+    let distanceUnits = 1;
+    const minUnits = 1;
+    const maxUnits = 50;
+    let direction = 1;
+    let side = 1;
+    let halfCycle = 0;
+    const pxPerUnit = 10;
+
+    const x = document.getElementById('xSymbol');
+    const distanceDisplay = document.getElementById('distanceDisplay');
+    const distancePx = document.getElementById('distancePx');
+    const speedInput = document.getElementById('speedInput');
+    const tickSound = document.getElementById('tickSound');
+    const timeCounter = document.getElementById('timeCounter');
+    const toggleBtn = document.getElementById('toggleBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let blinkIntervalId = null;
+    let timerIntervalId = null;
+    let elapsedSeconds = 0;
+    let running = true;
+
+    function updateUI() {
+      distanceDisplay.textContent = distanceUnits;
+      distancePx.textContent = (distanceUnits * pxPerUnit);
+      timeCounter.textContent = elapsedSeconds;
+    }
+
+    function blinkOnce() {
+      const speedSec = Math.max(0.1, parseFloat(speedInput.value) || 0.5);
+      const speedMs = speedSec * 1000;
+
+      const fadeMs = Math.max(40, Math.floor(speedMs / 2));
+      x.style.transition = `opacity ${fadeMs}ms linear`;
+
+      const centerX = window.innerWidth / 2;
+      const distancePxVal = distanceUnits * pxPerUnit;
+      x.style.left = `${centerX + side * distancePxVal}px`;
+
+      x.style.opacity = '1';
+      setTimeout(() => { x.style.opacity = '0'; }, fadeMs);
+
+      // Ses çal
+      tickSound.currentTime = 0;
+      tickSound.play();
+
+      side *= -1;
+      halfCycle++;
+
+      // Her tam döngüde mesafe değiştir
+      if (halfCycle % 2 === 0) {
+        distanceUnits += direction;
+        if (distanceUnits >= maxUnits) {
+          distanceUnits = maxUnits;
+          direction = -1;
+        } else if (distanceUnits <= minUnits) {
+          distanceUnits = minUnits;
+          direction = 1;
+        }
+        updateUI();
+      }
+    }
+
+    function startBlinkInterval() {
+      if (blinkIntervalId !== null) clearInterval(blinkIntervalId);
+      const speedSec = Math.max(0.1, parseFloat(speedInput.value) || 0.5);
+      const speedMs = speedSec * 1000;
+      blinkOnce();
+      blinkIntervalId = setInterval(blinkOnce, speedMs);
+    }
+
+    function stopBlinkInterval() {
+      if (blinkIntervalId !== null) {
+        clearInterval(blinkIntervalId);
+        blinkIntervalId = null;
+      }
+    }
+
+    function startTimer() {
+      if (timerIntervalId !== null) clearInterval(timerIntervalId);
+      timerIntervalId = setInterval(() => {
+        elapsedSeconds++;
+        updateUI();
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerIntervalId !== null) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+      }
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      if (running) {
+        stopBlinkInterval();
+        stopTimer();
+        toggleBtn.textContent = "Başlat";
+      } else {
+        startBlinkInterval();
+        startTimer();
+        toggleBtn.textContent = "Durdur";
+      }
+      running = !running;
+    });
+
+    resetBtn.addEventListener('click', () => {
+      elapsedSeconds = 0;
+      distanceUnits = 1;
+      direction = 1;
+      halfCycle = 0;
+      updateUI();
+    });
+
+    speedInput.addEventListener('input', () => {
+      if (running) startBlinkInterval();
+    });
+
+    window.addEventListener('resize', () => {
+      const centerX = window.innerWidth / 2;
+      const distancePxVal = distanceUnits * pxPerUnit;
+      x.style.left = `${centerX + side * distancePxVal}px`;
+    });
+
+    updateUI();
+    startBlinkInterval();
+    startTimer();
+  </script>
+</body>
+</html>
