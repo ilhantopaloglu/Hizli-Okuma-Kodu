@@ -1,3 +1,4 @@
+<!-- Uygulamalar/blok.html -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -209,8 +210,9 @@ body{
 <script>
 /* ========= API ANAHTARI DURUMU ========= */
 
+/* index.html ile aynı key: USER_API_KEY */
 function getApiKey(){
-  return localStorage.getItem("openai_api_key") || "";
+  return localStorage.getItem("USER_API_KEY") || "";
 }
 
 const apiStatusLine = document.getElementById("apiStatusLine");
