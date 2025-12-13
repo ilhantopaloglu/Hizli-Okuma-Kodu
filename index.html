@@ -1,4 +1,3 @@
-<!-- index.html (Kullanıcı kodu + Frontend API doğrulama) -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -111,36 +110,6 @@ body {
   font-size:12px;
   color:#b00020;
 }
-
-/* API PANELİ */
-#apiPanel{
-  width:80%;
-  background:#eef3ff;
-  border:1px solid #c9d7ff;
-  border-radius:8px;
-  padding:12px;
-  box-sizing:border-box;
-}
-#apiStatus{
-  font-size:13px;
-  margin-bottom:6px;
-}
-#apiPanel input{
-  width:100%;
-  padding:6px;
-  margin-bottom:6px;
-  box-sizing:border-box;
-}
-#apiPanel button{
-  width:100%;
-  padding:6px;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-  background:#007bff;
-  color:white;
-  font-size:14px;
-}
 </style>
 </head>
 <body>
@@ -165,27 +134,19 @@ body {
     <img src="Logo.jpg" alt="Kronos Logo">
   </div>
 
-  <!-- Sağ taraf (API + Egzersizler) -->
+  <!-- Sağ taraf (Egzersizler) -->
   <div class="right">
 
-    <!-- API Paneli -->
-    <div id="apiPanel">
-      <!-- Başlangıçta sadece "API girilmedi" desin -->
-      <div id="apiStatus">API girilmedi</div>
-      <input id="apiInput" type="password" placeholder="OpenAI API anahtarı (sk-...)">
-      <button onclick="checkAPI()">API Doğrula</button>
-    </div>
-
-    <div class="card" onclick="openIfAPI('goz.html')">
+    <div class="card" onclick="openPage('goz.html')">
       <h2>Göz Egzersizi</h2>
     </div>
-    <div class="card" onclick="openIfAPI('kelime.html')">
+    <div class="card" onclick="openPage('kelime.html')">
       <h2>Kelime Çalışması</h2>
     </div>
-    <div class="card" onclick="openIfAPI('blok.html')">
+    <div class="card" onclick="openPage('blok.html')">
       <h2>Blok Metin Çalışması</h2>
     </div>
-    <div class="card" onclick="openIfAPI('hafiza.html')">
+    <div class="card" onclick="openPage('hafiza.html')">
       <h2>Hafıza Oyunu</h2>
     </div>
   </div>
@@ -193,20 +154,16 @@ body {
 
 <script>
 /* ========= AYARLAR ========= */
-const CODE_LIST_URL = "https://ilhantopaloglu.github.io/HizliOkuma/kod.txt"; 
+const CODE_LIST_URL = "https://ilhantopaloglu.github.io/HizliOkuma/kod.txt";
 // txt formatı: KOD GG.AA.YYYY GG.AA.YYYY (her satır bir kod)
 
 const USER_CODE_KEY = "USER_CODE";
-const API_KEY_NAME  = "OPENAI_KEY";
 
 const codeOverlay    = document.getElementById("codeOverlay");
 const userCodeInput  = document.getElementById("userCodeInput");
 const userCodeButton = document.getElementById("userCodeButton");
 const codeError      = document.getElementById("codeError");
 const mainContent    = document.getElementById("mainContent");
-
-const apiStatus      = document.getElementById("apiStatus");
-const apiInput       = document.getElementById("apiInput");
 
 /* ========= SAYFA AÇILIŞ ========= */
 document.addEventListener("DOMContentLoaded", () => {
@@ -216,13 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
     checkUserCode(storedCode);
   } else {
     codeOverlay.style.display = "flex";
-  }
-
-  // API anahtarı daha önce kaydedildiyse otomatik kontrol et
-  const savedAPI = localStorage.getItem(API_KEY_NAME);
-  if (savedAPI && savedAPI.trim() !== "") {
-    apiInput.value = savedAPI;
-    checkAPI(true); // sessiz mod: hata mesajını abartmasın
   }
 });
 
@@ -240,9 +190,7 @@ async function checkUserCode(presetCode){
   }
 
   if(!enteredCode){
-    if (!fromStored) {
-      codeError.textContent = "Lütfen bir kullanıcı kodu girin.";
-    }
+    if (!fromStored) codeError.textContent = "Lütfen bir kullanıcı kodu girin.";
     return;
   }
 
@@ -254,9 +202,7 @@ async function checkUserCode(presetCode){
   }catch(err){
     console.error(err);
     codeOverlay.style.display = "flex";
-    if (!fromStored) {
-      codeError.textContent = "Kod listesine ulaşılamadı. Lütfen daha sonra tekrar deneyin.";
-    }
+    if (!fromStored) codeError.textContent = "Kod listesine ulaşılamadı. Lütfen daha sonra tekrar deneyin.";
     return;
   }
 
@@ -289,9 +235,7 @@ async function checkUserCode(presetCode){
   if(!foundValid){
     localStorage.removeItem(USER_CODE_KEY);
     codeOverlay.style.display = "flex";
-    if (!fromStored) {
-      codeError.textContent = "Kod geçersiz veya kullanım tarihi bitmiş.";
-    }
+    if (!fromStored) codeError.textContent = "Kod geçersiz veya kullanım tarihi bitmiş.";
     return;
   }
 
@@ -311,56 +255,9 @@ function parseTRDate(str){
   return isNaN(d.getTime()) ? null : d;
 }
 
-/* ========= API DOĞRULAMA (FRONTEND) ========= */
-// silent=true ise ilk açılışta kayıtlı API için sessiz kontrol yapılır
-async function checkAPI(silent = false){
-  const key = apiInput.value.trim();
-  if (!key){
-    if(!silent){
-      setApiStatus("API girilmedi", "red");
-    }
-    return;
-  }
-
-  setApiStatus("API kontrol ediliyor...", "blue");
-
-  try{
-    const res = await fetch("https://api.openai.com/v1/models", {
-      headers:{
-        "Authorization":"Bearer " + key
-      }
-    });
-
-    if(res.ok){
-      localStorage.setItem(API_KEY_NAME, key);
-      setApiStatus("✅ API geçerli", "green");
-    } else {
-      localStorage.removeItem(API_KEY_NAME);
-      setApiStatus("❌ API geçersiz", "red");
-    }
-  }catch(err){
-    console.error(err);
-    if(!silent){
-      setApiStatus("⚠ Bağlantı hatası", "orange");
-    } else {
-      // sessiz modda ise çok bağırmasın, ama yinede bir şey yazsın
-      setApiStatus("API kontrol edilemedi", "orange");
-    }
-  }
-}
-
-function setApiStatus(text, color){
-  apiStatus.textContent = text;
-  apiStatus.style.color = color;
-}
-
-/* ========= API YOKSA EGZERSİZİ AÇMA ========= */
-function openIfAPI(page){
-  const key = localStorage.getItem(API_KEY_NAME);
-  if(!key || key.trim() === ""){
-    alert("Lütfen önce geçerli bir OpenAI API anahtarı doğrulayın.");
-    return;
-  }
+/* ========= SAYFA AÇ ========= */
+function openPage(page){
+  // Ana sayfaya kullanıcı kodu ile girildiyse sayfaları aç
   window.location.href = page;
 }
 </script>
