@@ -1,3 +1,4 @@
+
 <!-- Uygulamalar/blok.html -->
 <!DOCTYPE html>
 <html lang="tr">
@@ -154,10 +155,16 @@ body{
 
     <div id="settingsContent">
 
-      <!-- SADECE DURUM GÖSTEREN API BÖLÜMÜ -->
+      <!-- API BÖLÜMÜ (Bu sayfada sorgulansın) -->
       <div class="section">
         <h3>1) API Durumu</h3>
-        <div id="apiStatusLine" style="font-weight:bold;"></div>
+        <div id="apiStatusLine" style="font-weight:bold;margin-bottom:6px;"></div>
+
+        <div id="apiEntry" style="display:none;">
+          <input id="apiKeyInput" type="password" placeholder="OpenAI API anahtarı (sk-...)" style="width:100%;margin-bottom:6px;box-sizing:border-box;">
+          <button class="primary" id="apiSaveBtn" type="button">API Doğrula ve Kaydet</button>
+          <div id="apiSaveStatus" style="font-size:11px;margin-top:6px;"></div>
+        </div>
       </div>
 
       <div class="section">
@@ -225,6 +232,16 @@ body{
 </div>
 
 <script>
+
+/* ========= KULLANICI KODU GÜVENLİK KONTROLÜ ========= */
+(function ensureUserCode(){
+  const code = localStorage.getItem("USER_CODE");
+  if(!code || !code.trim()){
+    // Doğrudan link ile gelindiyse, ana sayfaya yönlendir
+    alert("Önce kullanıcı kodu ile giriş yapmalısınız.");
+    window.location.href = "AnaSayfa.html";
+  }
+})();
 /* ========= API ANAHTARI DURUMU ========= */
 
 /* index.html ile aynı key: USER_API_KEY */
@@ -233,15 +250,70 @@ function getApiKey(){
 }
 
 const apiStatusLine = document.getElementById("apiStatusLine");
+const apiEntry      = document.getElementById("apiEntry");
+const apiKeyInput   = document.getElementById("apiKeyInput");
+const apiSaveBtn    = document.getElementById("apiSaveBtn");
+const apiSaveStatus = document.getElementById("apiSaveStatus");
+
+async function verifyApiKey(key){
+  // Basit doğrulama: /v1/models endpoint'i
+  const res = await fetch("https://api.openai.com/v1/models", {
+    headers: { "Authorization": "Bearer " + key }
+  });
+  return res.ok;
+}
+
+async function handleApiSave(){
+  const key = (apiKeyInput.value || "").trim();
+  apiSaveStatus.textContent = "";
+  if(!key || key.length < 10){
+    apiSaveStatus.textContent = "Lütfen geçerli bir anahtar girin.";
+    apiSaveStatus.style.color = "red";
+    return;
+  }
+
+  apiSaveBtn.disabled = true;
+  apiSaveStatus.textContent = "API kontrol ediliyor...";
+  apiSaveStatus.style.color = "blue";
+
+  try{
+    const ok = await verifyApiKey(key);
+    if(ok){
+      localStorage.setItem("USER_API_KEY", key);
+      apiSaveStatus.textContent = "✅ API geçerli ve kaydedildi.";
+      apiSaveStatus.style.color = "green";
+      updateApiStatusLine();
+    }else{
+      localStorage.removeItem("USER_API_KEY");
+      apiSaveStatus.textContent = "❌ API geçersiz. Lütfen tekrar deneyin.";
+      apiSaveStatus.style.color = "red";
+      updateApiStatusLine();
+    }
+  }catch(err){
+    console.error(err);
+    apiSaveStatus.textContent = "⚠ Bağlantı hatası. Lütfen tekrar deneyin.";
+    apiSaveStatus.style.color = "orange";
+  }finally{
+    apiSaveBtn.disabled = false;
+  }
+}
+
+if(apiSaveBtn){
+  apiSaveBtn.addEventListener("click", handleApiSave);
+}
+
 
 function updateApiStatusLine(){
   const key = getApiKey();
   if(key && key.trim().length > 10){
     apiStatusLine.textContent = "✅ API kayıtlı";
     apiStatusLine.style.color = "green";
+    if(apiEntry) apiEntry.style.display = "none";
+    if(apiKeyInput) apiKeyInput.value = key;
   }else{
     apiStatusLine.textContent = "❌ API kayıtlı değil";
     apiStatusLine.style.color = "red";
+    if(apiEntry) apiEntry.style.display = "block";
   }
 }
 
@@ -395,7 +467,7 @@ async function generateTextFromAPI(){
   updateApiStatusLine();
 
   if(!apiKey){
-    alert("API anahtarı kayıtlı değil. Lütfen ana sayfadan API anahtarını girin.");
+    alert("API anahtarı kayıtlı değil. Bu sayfadan API anahtarını doğrulayın ve kaydedin.");
     return;
   }
 
@@ -649,7 +721,7 @@ async function generateQuestionsForText(){
   updateApiStatusLine();
 
   if(!apiKey){
-    alert("API anahtarı kayıtlı değil. Lütfen ana sayfadan API anahtarını girin.");
+    alert("API anahtarı kayıtlı değil. Bu sayfadan API anahtarını doğrulayın ve kaydedin.");
     questionContainer.innerHTML = "";
     return;
   }
